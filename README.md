@@ -1,9 +1,8 @@
 # P4-SFC
 
-This is a P4 implementation of Service Function Chaining (SFC).
+This is a P4 implementation of service function chaining based on [IETF RFC7665](https://tools.ietf.org/html/rfc7665).
 
-TBA
-
+More details and complete implementations will be added.
 
 ## System Requirements
 * Ubuntu 14.04+
