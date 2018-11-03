@@ -2,7 +2,7 @@
 #include <core.p4>
 #include <v1model.p4>
 
-const bit<16> TYPE_SFC = 0x1212;
+const bit<16> TYPE_SFC = 0x1212; // Define TYPE for SFC
 const bit<8> TYPE_TCP = 0x06;
 const bit<16> TYPE_IPV4 = 0x800;
 
@@ -20,17 +20,18 @@ header ethernet_t {
     bit<16>   etherType;
 }
 
-header sfc_t {
-    bit<16> sfp_id;
-    bit<16> src_id;
-    bit<16> dst_id;
+header sfc_t {  // Define SFC header for encapsulation.
+    bit<16> sfp_id; // Service Function Path ID
+    bit<16> src_id; // Source SF/SFF ID
+    bit<16> dst_id; // Destination SF/SFF ID
 }
 
 header ipv4_t {
     bit<4>    version;
     bit<4>    ihl;
-    bit<8>    dscp;
+    bit<8>    dscp; // We use DSCP field to assign SFP
     bit<16>   totalLen;
+
     bit<16>   identification;
     bit<3>    flags;
     bit<13>   fragOffset;
@@ -200,7 +201,7 @@ control MyIngress(inout headers hdr,
     }
 
     apply {
-        if (hdr.ipv4.isValid() && !hdr.sfc.isValid()) {             // Process only non-SFC packets
+        if (hdr.ipv4.isValid() && !hdr.sfc.isValid()) {   // Process only non-SFC packets
             ipv4_lpm.apply();
         }
         if (hdr.sfc.isValid()) {
