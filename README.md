@@ -1,13 +1,13 @@
 # P4-SFC
 
 This is a P4 implementation of service function chaining based on [IETF RFC7665](https://tools.ietf.org/html/rfc7665).
-Our implementation includes the following SFC components.
-* Service Classifier
+Our implementation includes the following SFC core components and functions.
+
 * Service Function Forwarder (SFF)
-* Service Function Path (SFP)
+* SFC Encapsulation
+* Service Classification
 
 More details and complete implementations will be added.
-
 
 ## System Requirements
 * Ubuntu 14.04+
@@ -20,7 +20,7 @@ We recommend to use [a VM of P4 tutorials](https://github.com/p4lang/tutorials/t
 
 ### 1. Cloning the repository
 ```bash
-$ git clone https://github.com/GyuyeongKim/P4-SFC.git
+$ git clone https://github.com/multip4/P4-SFC.git
 $ cd P4-SFC
 ```
 
