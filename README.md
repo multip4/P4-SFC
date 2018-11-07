@@ -7,14 +7,15 @@ Our implementation includes the following SFC core components and functions.
 * SFC Encapsulation
 * Service Classification
 
-More details and complete implementations will be added.
-
 ## System Requirements
 * Ubuntu 14.04+
 * [P4 BMv2](https://github.com/p4lang/behavioral-model)
 * [p4c](https://github.com/p4lang/p4c)
 
 We recommend to use [a VM of P4 tutorials](https://github.com/p4lang/tutorials/tree/sigcomm18-final-edits) that has all of the required soft ware installed.
+
+Note that this implementation has only been tested in BMv2.
+Therefore, it may not work as is on production P4-enabled programmable switches.
 
 ## Usage
 
