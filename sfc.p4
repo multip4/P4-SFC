@@ -15,7 +15,7 @@ typedef bit<9>  egressSpec_t;
 typedef bit<48> macAddr_t;
 typedef bit<32> ip4Addr_t;
 typedef bit<16> sfcAddr_t;
-typedef bit<8> sfpID_t;
+typedef bit<16> sfpID_t;
 
 header ethernet_t {
     macAddr_t dstAddr;
