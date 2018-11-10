@@ -4,6 +4,7 @@
 
 const bit<16> TYPE_SFC = 0x1212; // Define TYPE for SFC
 const bit<8> TYPE_TCP = 0x06;
+const bit<8> TYPE_UDP = 0x11;
 const bit<16> TYPE_IPV4 = 0x800;
 
 /*************************************************************************
@@ -13,6 +14,8 @@ const bit<16> TYPE_IPV4 = 0x800;
 typedef bit<9>  egressSpec_t;
 typedef bit<48> macAddr_t;
 typedef bit<32> ip4Addr_t;
+typedef bit<16> sfcAddr_t;
+typedef bit<8> sfpID_t;
 
 header ethernet_t {
     macAddr_t dstAddr;
@@ -21,9 +24,9 @@ header ethernet_t {
 }
 
 header sfc_t {  // Define SFC header for encapsulation.
-    bit<16> sfp_id; // Service Function Path ID
-    bit<16> src_id; // Source SF/SFF ID
-    bit<16> dst_id; // Destination SF/SFF ID
+    sfpID_t sfp_id; // Service Function Path ID
+    sfcAddr_t src_id; // Source SF/SFF ID
+    sfcAddr_t dst_id; // Destination SF/SFF ID
 }
 
 header ipv4_t {
@@ -31,7 +34,6 @@ header ipv4_t {
     bit<4>    ihl;
     bit<8>    dscp; // We use DSCP field to assign SFP
     bit<16>   totalLen;
-
     bit<16>   identification;
     bit<3>    flags;
     bit<13>   fragOffset;
@@ -56,15 +58,24 @@ header tcp_t {
     bit<16> urgentPtr;
 }
 
+header udp_t {
+    bit<16> srcPort;
+    bit<16> dstPort;
+    bit<16> len;
+    bit<16> checksum;
+
+}
+
 struct metadata {
     /* empty */
 }
 
 struct headers {
-    ethernet_t   ethernet;
-    sfc_t   sfc;
-    ipv4_t       ipv4;
-    tcp_t      tcp;
+    ethernet_t ethernet;
+    sfc_t sfc;
+    ipv4_t ipv4;
+    tcp_t tcp;
+    udp_t udp;
 }
 
 /*************************************************************************
@@ -101,11 +112,16 @@ parser MyParser(packet_in packet,
         packet.extract(hdr.ipv4);
         transition select(hdr.ipv4.protocol) {
             TYPE_TCP: parse_tcp;
+            TYPE_UDP: parse_udp;
             default: accept;
         }
     }
     state parse_tcp {
         packet.extract(hdr.tcp);
+        transition accept;
+    }
+    state parse_udp {
+        packet.extract(hdr.udp);
         transition accept;
     }
 }
@@ -129,15 +145,12 @@ control MyIngress(inout headers hdr,
     action drop() {
         mark_to_drop();
     }
-    action allow() {
-    }
     action ipv4_forward(macAddr_t dstAddr, egressSpec_t port) {
         standard_metadata.egress_spec = port;
         hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
         hdr.ethernet.dstAddr = dstAddr;
         hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
     }
-
     table ipv4_lpm {
         key = {
             hdr.ipv4.dstAddr: lpm;
@@ -151,7 +164,8 @@ control MyIngress(inout headers hdr,
         default_action = drop();
     }
 
-    action sfc_set_sfp_id(bit<16> sfp_id) {
+
+    action sfc_set_sfpID(sfpID_t sfp_id) {
         hdr.sfc.sfp_id = sfp_id;
     }
     table sfc_classifier {
@@ -159,14 +173,14 @@ control MyIngress(inout headers hdr,
             hdr.ipv4.dscp: exact;
         }
         actions = {
-            sfc_set_sfp_id;
+            sfc_set_sfpID;
             drop;
         }
         size = 1024;
         default_action = drop();
     }
 
-    action sfc_set_dst_id(bit<16> dst_id) {
+    action sfc_set_dst_id(sfcAddr_t dst_id) {
         hdr.sfc.dst_id = dst_id;
     }
     table sfc_next {
@@ -176,7 +190,6 @@ control MyIngress(inout headers hdr,
         }
         actions = {
             sfc_set_dst_id;
-            NoAction;
             drop;
         }
         size = 1024;
@@ -193,7 +206,6 @@ control MyIngress(inout headers hdr,
         }
         actions = {
             sfc_forward;
-            NoAction;
             drop;
         }
         size = 1024;
@@ -256,6 +268,7 @@ control MyDeparser(packet_out packet, in headers hdr) {
         packet.emit(hdr.sfc);
         packet.emit(hdr.ipv4);
         packet.emit(hdr.tcp);
+        packet.emit(hdr.udp);
     }
 }
 
