@@ -181,7 +181,8 @@ control MyIngress(inout headers hdr,
     }
 
     action sfc_set_dst_id(sfcAddr_t dst_id) {
-        hdr.sfc.dst_id = dst_id;
+        hdr.sfc.src_id = hdr.sfc.dst_id; // in the next hop, you say you are from dst_id
+        hdr.sfc.dst_id = dst_id; // You should go to dst_id
     }
     table sfc_next {
         key = {
