@@ -1,0 +1,83 @@
+{
+  "target": "bmv2",
+  "p4info": "build/sfc.p4info",
+  "bmv2_json": "build/sfc.json",
+  "table_entries": [
+    {
+      "table": "MyIngress.sfc_classifier",
+      "match": {
+        "hdr.ipv4.dscp": 1
+      },
+      "action_name": "MyIngress.sfc_set_sfpID",
+      "action_params": {
+        "sfp_id": 1
+      }
+    },
+    {
+      "table": "MyIngress.sfc_next",
+      "match": {
+        "hdr.sfc.sfp_id": 1,
+        "hdr.sfc.src_id": 255
+      },
+      "action_name": "MyIngress.sfc_set_dst_id",
+      "action_params": {
+        "dst_id": 2
+      }
+    },
+    {
+      "table": "MyIngress.sfc_next",
+      "match": {
+        "hdr.sfc.sfp_id": 1,
+        "hdr.sfc.src_id": 2
+      },
+      "action_name": "MyIngress.sfc_set_dst_id",
+      "action_params": {
+        "dst_id": 3
+      }
+    },
+    {
+      "table": "MyIngress.sfc_next",
+      "match": {
+        "hdr.sfc.sfp_id": 1,
+        "hdr.sfc.src_id": 3
+      },
+      "action_name": "MyIngress.sfc_set_dst_id",
+      "action_params": {
+        "dst_id": 0
+      }
+    },
+    {
+      "table": "MyIngress.sfc_egress",
+      "match": {
+        "hdr.sfc.sfp_id": 1,
+        "hdr.sfc.dst_id": 0
+      },
+      "action_name": "MyIngress.sfc_forward",
+      "action_params": {
+        "port": 1
+      }
+    },
+    {
+      "table": "MyIngress.sfc_egress",
+      "match": {
+        "hdr.sfc.sfp_id": 1,
+        "hdr.sfc.dst_id": 2
+      },
+      "action_name": "MyIngress.sfc_forward",
+      "action_params": {
+        "port": 2
+      }
+    },
+    {
+      "table": "MyIngress.sfc_egress",
+      "match": {
+        "hdr.sfc.sfp_id": 1,
+        "hdr.sfc.dst_id": 3
+      },
+      "action_name": "MyIngress.sfc_forward",
+      "action_params": {
+        "port": 3
+      }
+    }
+  ]
+}
