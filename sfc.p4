@@ -24,6 +24,7 @@ header ethernet_t {
 }
 
 header sfc_t {  // Define SFC header for encapsulation.
+    sfpID_t service_id;
     sfpID_t sfp_id; // Service Function Path ID
     sfcAddr_t src_id; // Source SF/SFF ID
     sfcAddr_t dst_id; // Destination SF/SFF ID
@@ -165,19 +166,20 @@ control MyIngress(inout headers hdr,
     }
 
 
-    action sfc_set_sfpID(sfpID_t sfp_id) {
+    action sfc_set_sfpID(sfpID_t sfp_id, sfcAddr_t dst_id) {
         hdr.sfc.sfp_id = sfp_id;
+        hdr.sfc.dst_id = dst_id; // To notify src id in the sfc_next table
     }
     table sfc_classifier {
         key = {
-            hdr.ipv4.dscp: exact;
+            hdr.sfc.service_id: exact;
         }
         actions = {
             sfc_set_sfpID;
-            drop;
+            NoAction;
         }
         size = 1024;
-        default_action = drop();
+        default_action = NoAction();
     }
 
     action sfc_set_dst_id(sfcAddr_t dst_id) {

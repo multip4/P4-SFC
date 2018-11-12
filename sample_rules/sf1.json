@@ -4,16 +4,6 @@
   "bmv2_json": "build/sfc.json",
   "table_entries": [
     {
-      "table": "MyIngress.sfc_classifier",
-      "match": {
-        "hdr.ipv4.dscp": 1
-      },
-      "action_name": "MyIngress.sfc_set_sfpID",
-      "action_params": {
-        "sfp_id": 1
-      }
-    },
-    {
       "table": "MyIngress.sfc_next",
       "match": {
         "hdr.sfc.sfp_id": 1,
