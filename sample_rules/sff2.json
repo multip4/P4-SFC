@@ -6,7 +6,7 @@
     {
       "table": "MyIngress.sfc_classifier",
       "match": {
-        "hdr.sfc.service_id": 1
+        "hdr.ipv4.dscp": 1
       },
       "action_name": "MyIngress.sfc_set_sfpID",
       "action_params": {

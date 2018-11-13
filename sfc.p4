@@ -24,7 +24,6 @@ header ethernet_t {
 }
 
 header sfc_t {  // Define SFC header for encapsulation.
-    sfpID_t service_id;
     sfpID_t sfp_id; // Service Function Path ID
     sfcAddr_t src_id; // Source SF/SFF ID
     sfcAddr_t dst_id; // Destination SF/SFF ID
@@ -103,10 +102,7 @@ parser MyParser(packet_in packet,
 
     state parse_sfc {
         packet.extract(hdr.sfc);
-        transition select(hdr.sfc.sfp_id) {
-            TYPE_IPV4: parse_ipv4;
-            default: accept;
-        }
+        transition accept;
     }
 
     state parse_ipv4 {
@@ -165,14 +161,16 @@ control MyIngress(inout headers hdr,
         default_action = drop();
     }
 
-
     action sfc_set_sfpID(sfpID_t sfp_id, sfcAddr_t dst_id) {
+        hdr.ethernet.etherType = TYPE_SFC;
+        hdr.sfc.setValid();
         hdr.sfc.sfp_id = sfp_id;
-        hdr.sfc.dst_id = dst_id; // To notify src id in the sfc_next table
+        hdr.sfc.src_id = 255;
+        hdr.sfc.dst_id = dst_id;
     }
     table sfc_classifier {
         key = {
-            hdr.sfc.service_id: exact;
+            hdr.ipv4.dscp: exact;
         }
         actions = {
             sfc_set_sfpID;
@@ -216,11 +214,13 @@ control MyIngress(inout headers hdr,
     }
 
     apply {
-        if (hdr.ipv4.isValid() && !hdr.sfc.isValid()) {   // Process only non-SFC packets
+        if (hdr.ipv4.isValid() && hdr.ipv4.dscp < 1 && !hdr.sfc.isValid()) {   // Process only non-SFC packets
             ipv4_lpm.apply();
         }
-        if (hdr.sfc.isValid()) {
+        if (hdr.ipv4.isValid() && hdr.ipv4.dscp > 0 && !hdr.sfc.isValid()){
             sfc_classifier.apply();
+        }
+        if (hdr.sfc.isValid()) {
             sfc_next.apply();
             sfc_egress.apply();
         }
