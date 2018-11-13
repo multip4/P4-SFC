@@ -27,6 +27,7 @@ header sfc_t {  // Define SFC header for encapsulation.
     sfpID_t sfp_id; // Service Function Path ID
     sfcAddr_t src_id; // Source SF/SFF ID
     sfcAddr_t dst_id; // Destination SF/SFF ID
+    sfpID_t nsi; // To avoid loop
 }
 
 header ipv4_t {
@@ -167,6 +168,7 @@ control MyIngress(inout headers hdr,
         hdr.sfc.sfp_id = sfp_id;
         hdr.sfc.src_id = 255;
         hdr.sfc.dst_id = dst_id;
+        hdr.sfc.nsi = 255;
     }
     table sfc_classifier {
         key = {
@@ -199,6 +201,7 @@ control MyIngress(inout headers hdr,
 
     action sfc_forward(egressSpec_t port) {
         standard_metadata.egress_spec = port;
+        hdr.sfc.nsi = hdr.sfc.nsi - 1;
     }
     table sfc_egress {
         key = {
@@ -220,9 +223,12 @@ control MyIngress(inout headers hdr,
         if (hdr.ipv4.isValid() && hdr.ipv4.dscp > 0 && !hdr.sfc.isValid()){
             sfc_classifier.apply();
         }
-        if (hdr.sfc.isValid()) {
+        if (hdr.sfc.isValid() && hdr.sfc.nsi > 0) {
             sfc_next.apply();
             sfc_egress.apply();
+        }
+        else{
+            drop();
         }
     }
 }
