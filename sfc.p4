@@ -103,7 +103,7 @@ parser MyParser(packet_in packet,
 
     state parse_sfc {
         packet.extract(hdr.sfc);
-        transition accept;
+        transition parse_ipv4;
     }
 
     state parse_ipv4 {
@@ -149,6 +149,7 @@ control MyIngress(inout headers hdr,
         hdr.ethernet.dstAddr = dstAddr;
         hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
     }
+
     table ipv4_lpm {
         key = {
             hdr.ipv4.dstAddr: lpm;
@@ -159,7 +160,7 @@ control MyIngress(inout headers hdr,
             NoAction;
         }
         size = 1024;
-        default_action = drop();
+        default_action = NoAction();
     }
 
     action sfc_set_sfpID(sfpID_t sfp_id, sfcAddr_t dst_id) {
@@ -199,8 +200,11 @@ control MyIngress(inout headers hdr,
         default_action = drop();
     }
 
-    action sfc_forward(egressSpec_t port) {
+    action sfc_forward(macAddr_t dstAddr, egressSpec_t port) {
         standard_metadata.egress_spec = port;
+        hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
+        hdr.ethernet.dstAddr = dstAddr;
+        hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
         hdr.sfc.nsi = hdr.sfc.nsi - 1;
     }
     table sfc_egress {
@@ -217,7 +221,7 @@ control MyIngress(inout headers hdr,
     }
 
     apply {
-        if (hdr.ipv4.isValid() && hdr.ipv4.dscp < 1 && !hdr.sfc.isValid()) {   // Process only non-SFC packets
+        if (hdr.ipv4.isValid() && hdr.ipv4.dscp < 1) {   // Process only non-SFC packets
             ipv4_lpm.apply();
         }
         if (hdr.ipv4.isValid() && hdr.ipv4.dscp > 0 && !hdr.sfc.isValid()){
