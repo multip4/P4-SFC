@@ -114,6 +114,7 @@ parser MyParser(packet_in packet,
             default: accept;
         }
     }
+
     state parse_tcp {
         packet.extract(hdr.tcp);
         transition accept;
@@ -160,7 +161,7 @@ control MyIngress(inout headers hdr,
             NoAction;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = drop();
     }
 
     action sfc_set_sfpID(sfpID_t sfp_id, sfcAddr_t dst_id) {
@@ -221,18 +222,19 @@ control MyIngress(inout headers hdr,
     }
 
     apply {
-        if (hdr.ipv4.isValid() && hdr.ipv4.dscp < 1) {   // Process only non-SFC packets
+
+        if (hdr.ipv4.isValid() && hdr.ipv4.dscp == 0) {   // Process only non-SFC packets
             ipv4_lpm.apply();
         }
-        if (hdr.ipv4.isValid() && hdr.ipv4.dscp > 0 && !hdr.sfc.isValid()){
-            sfc_classifier.apply();
-        }
-        if (hdr.sfc.isValid() && hdr.sfc.nsi > 0) {
-            sfc_next.apply();
-            sfc_egress.apply();
-        }
         else{
-            drop();
+            if (!hdr.sfc.isValid()){
+                sfc_classifier.apply();
+            }
+            if (hdr.sfc.nsi < 0){
+                drop();
+            }
+                sfc_next.apply();
+                sfc_egress.apply();
         }
     }
 }
