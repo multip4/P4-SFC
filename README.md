@@ -2,13 +2,14 @@
 
 This is a P4 (P4_16) implementation of service function chaining based on [IETF RFC7665](https://tools.ietf.org/html/rfc7665).
 Our implementation includes the following SFC core components and functions.
-
 * Classifier
   * Service Function Path (SFP) assignment
   * SFC encapsulation
 * Service Function Forwarder (SFF)
   * SFP forwarding
   * SFP termination (decapsulation)
+
+The implementation of SFC header structure will be modified based on recent [IETF RFC8300](https://tools.ietf.org/html/rfc8300) soon.
 
 ## System Requirements
 * Ubuntu 14.04+
