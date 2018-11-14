@@ -164,20 +164,36 @@ control MyIngress(inout headers hdr,
         default_action = drop();
     }
 
-    action sfc_set_sfpID(sfpID_t sfp_id, sfcAddr_t dst_id) {
+    action sfc_decapsulation() {
+           hdr.ethernet.etherType = TYPE_IPV4;
+           hdr.sfc.setInvalid();
+    }
+    table sfc_termination {
+        key = {
+            hdr.ethernet.dstAddr: exact;
+        }
+        actions = {
+            sfc_decapsulation;
+            NoAction;
+        }
+        size = 1024;
+        default_action = NoAction();
+    }
+    action sfc_encapsulation(sfpID_t sfp_id, sfcAddr_t dst_id) {
         hdr.ethernet.etherType = TYPE_SFC;
         hdr.sfc.setValid();
         hdr.sfc.sfp_id = sfp_id;
         hdr.sfc.src_id = 255;
         hdr.sfc.dst_id = dst_id;
         hdr.sfc.nsi = 255;
+
     }
     table sfc_classifier {
         key = {
             hdr.ipv4.dscp: exact;
         }
         actions = {
-            sfc_set_sfpID;
+            sfc_encapsulation;
             NoAction;
         }
         size = 1024;
@@ -207,6 +223,7 @@ control MyIngress(inout headers hdr,
         hdr.ethernet.dstAddr = dstAddr;
         hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
         hdr.sfc.nsi = hdr.sfc.nsi - 1;
+
     }
     table sfc_egress {
         key = {
@@ -221,6 +238,7 @@ control MyIngress(inout headers hdr,
         default_action = drop();
     }
 
+
     apply {
 
         if (hdr.ipv4.isValid() && hdr.ipv4.dscp == 0) {   // Process only non-SFC packets
@@ -233,8 +251,10 @@ control MyIngress(inout headers hdr,
             if (hdr.sfc.nsi < 0){
                 drop();
             }
-                sfc_next.apply();
-                sfc_egress.apply();
+            sfc_next.apply();
+            sfc_egress.apply();
+            sfc_termination.apply();
+
         }
     }
 }

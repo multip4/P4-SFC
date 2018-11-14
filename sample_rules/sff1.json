@@ -4,11 +4,48 @@
   "bmv2_json": "build/sfc.json",
   "table_entries": [
     {
+      "table": "MyIngress.sfc_termination",
+      "match": {
+        "hdr.ethernet.dstAddr": "00:00:00:00:01:01"
+      },
+      "action_name": "MyIngress.sfc_decapsulation",
+      "action_params": {
+      }
+    },
+    {
+      "table": "MyIngress.ipv4_lpm",
+      "default_action": true,
+      "action_name": "MyIngress.drop",
+      "action_params": { }
+    },
+    {
+      "table": "MyIngress.ipv4_lpm",
+      "match": {
+        "hdr.ipv4.dstAddr": ["10.0.1.1", 32]
+      },
+      "action_name": "MyIngress.ipv4_forward",
+      "action_params": {
+        "dstAddr": "00:00:00:00:01:01",
+        "port": 1
+      }
+    },
+    {
+      "table": "MyIngress.ipv4_lpm",
+      "match": {
+        "hdr.ipv4.dstAddr": ["10.0.2.2", 32]
+      },
+      "action_name": "MyIngress.ipv4_forward",
+      "action_params": {
+        "dstAddr": "00:00:00:02:02:00",
+        "port": 2
+      }
+    },
+    {
       "table": "MyIngress.sfc_classifier",
       "match": {
         "hdr.ipv4.dscp": 1
       },
-      "action_name": "MyIngress.sfc_set_sfpID",
+      "action_name": "MyIngress.sfc_encapsulation",
       "action_params": {
         "sfp_id": 1,
         "dst_id": 1
@@ -55,6 +92,7 @@
       },
       "action_name": "MyIngress.sfc_forward",
       "action_params": {
+        "dstAddr": "00:00:00:00:01:01",
         "port": 1
       }
     },
@@ -66,6 +104,7 @@
       },
       "action_name": "MyIngress.sfc_forward",
       "action_params": {
+        "dstAddr": "00:00:00:03:01:00",
         "port": 3
       }
     },
@@ -77,6 +116,7 @@
       },
       "action_name": "MyIngress.sfc_forward",
       "action_params": {
+        "dstAddr": "00:00:00:02:01:00",
         "port": 2
       }
     }

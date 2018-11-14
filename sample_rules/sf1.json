@@ -22,6 +22,7 @@
       },
       "action_name": "MyIngress.sfc_forward",
       "action_params": {
+        "dstAddr": "00:00:00:00:00:00",
         "port": 1
       }
     }
