@@ -15,7 +15,7 @@ const bit<8> TYPE_TUNNEL = 0x1;
 typedef bit<9>  egressSpec_t;
 typedef bit<48> macAddr_t;
 typedef bit<32> ip4Addr_t;
-typedef bit<32> tunnelAddr_t;
+typedef bit<16> tunnelAddr_t;
 
 header ethernet_t {
     macAddr_t dstAddr;
