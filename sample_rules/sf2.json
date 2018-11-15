@@ -7,18 +7,18 @@
       "table": "MyIngress.sfc_next",
       "match": {
         "hdr.sfc.SPI": 1,
-        "hdr.sfc.SI": 254
+        "hdr.sfc.SI": 253
       },
       "action_name": "MyIngress.sfc_set_dst_id",
       "action_params": {
-        "dst_id": 4,
-        "NxpHp_id": 1
+        "dst_id": 5,
+        "NxpHp_id": 3
       }
     },
     {
       "table": "MyIngress.sfc_egress",
       "match": {
-        "hdr.tunnel.dst_id": 4
+        "hdr.tunnel.dst_id": 5
       },
       "action_name": "MyIngress.sfc_forward",
       "action_params": {
