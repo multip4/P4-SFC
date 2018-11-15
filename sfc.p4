@@ -33,7 +33,7 @@ header sfc_t {
     bit<1> u1;
     bit<6> ttl;
     bit<6> len;
-    bit<4> u2; // Actually, this is four 1-bit unassigned fields
+    bit<4> u2;
     bit<4> MDtype;
     bit<8> protocol;
     bit<24> SPI;
@@ -182,6 +182,7 @@ control MyIngress(inout headers hdr,
 
     action sfc_decapsulation() {
            hdr.ethernet.etherType = TYPE_IPV4;
+           hdr.ipv4.dscp = 0;
            hdr.tunnel.setInvalid();
            hdr.sfc.setInvalid();
     }
@@ -282,7 +283,6 @@ control MyIngress(inout headers hdr,
             sfc_next.apply();
             sfc_egress.apply();
             sfc_termination.apply();
-
         }
     }
 }
