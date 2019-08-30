@@ -1,4 +1,4 @@
-# Service Function Chaining in Programmable Data Plane
+# High Performance and High available Service Function Chaining in Programmable Data Plane
 
 This is a P4 (P4_16) implementation of service function chaining based on [IETF RFC7665](https://tools.ietf.org/html/rfc7665) and [IETF RFC8300](https://tools.ietf.org/html/rfc8300).
 Our implementation includes the following SFC core components and functions.
