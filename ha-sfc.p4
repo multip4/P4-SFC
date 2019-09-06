@@ -7,7 +7,7 @@ const bit<8> TYPE_TCP = 0x06;
 const bit<8> TYPE_UDP = 0x11;
 const bit<16> TYPE_IPV4 = 0x800;
 const bit<8> TYPE_TUNNEL = 0x1;
-#define MAX_HOPS 8 //  HA
+#define MAX_HOPS 4 //  Max service chain  length
 /*************************************************************************
 *********************** H E A D E R S  ***********************************
 *************************************************************************/
@@ -15,7 +15,7 @@ const bit<8> TYPE_TUNNEL = 0x1;
 typedef bit<9>  egressSpec_t;
 typedef bit<48> macAddr_t;
 typedef bit<32> ip4Addr_t;
-typedef bit<16> tunnelAddr_t;
+typedef bit<9> tunnelAddr_t;
 
 header ethernet_t {
     macAddr_t dstAddr;
@@ -23,18 +23,17 @@ header ethernet_t {
     bit<16>   etherType;
 }
 
-header tunnel_t {
+header tunnel_t { // why still use this..?
     tunnelAddr_t dst_id; // Next SF
 }
 
 header sfc_t {
-    bit<24> SPI;
-    bit<8> SI;
-    bit<8> cur_idx; // HA counter
-    bit<8> chain_len; // Chain length
+    bit<8> op;
+    bit<8> sc; // tracker
 }
-header sfc_chain_t { //HA
-    bit<8> SF; // Next SF
+
+header sfc_chain_t {
+    bit<9> sf; // Next SF
 }
 
 header ipv4_t {
@@ -81,8 +80,8 @@ struct metadata {
 struct headers {
     ethernet_t ethernet;
     tunnel_t tunnel;
-    sfc_t sfc;
     sfc_chain_t[MAX_HOPS] sfc_chain;
+    sfc_t sfc;
     ipv4_t ipv4;
     tcp_t tcp;
     udp_t udp;
@@ -154,10 +153,15 @@ control MyVerifyChecksum(inout headers hdr, inout metadata meta) {
 control MyIngress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
-    action sfc_next_ha() {
-          hdr.tunnel.dst_id = (bit<9>)hdr.sfc_chain[hdr.sfc.cur_idx].SF; // read next SF from SFC chian header
-          hdr.sfc.cur_idx = hdr.sfc.cur_idx + 1; // HA Increase current index
-      }
+
+
+
+    action sfc_pop_chain() {
+        hdr.tunnel.dst_id = hdr.sfc_chain[0].sf; // Update next SF.
+        hdr.sfc_chain.pop_front(1); // Remove used SF
+        hdr.sfc.sc = hdr.sfc.sc - 1; // decrease chain tracker..
+    }
+
     action drop() {
         mark_to_drop();
     }
@@ -189,29 +193,27 @@ control MyIngress(inout headers hdr,
            hdr.ipv4.dscp = 0;
            hdr.tunnel.setInvalid();
            hdr.sfc.setInvalid();
-           hdf.sfc_chain.Invalid(); // HA
+           hdr.sfc_chain[0].setInvalid();
+           hdr.sfc_chain[1].setInvalid();
+           hdr.sfc_chain[2].setInvalid();
+           hdr.sfc_chain[3].setInvalid();
     }
-    table sfc_termination {
-        key = {
-            hdr.ethernet.dstAddr: exact;
-        }
-        actions = {
-            sfc_decapsulation;
-            NoAction;
-        }
-        size = 1024;
-        default_action = NoAction();
-    }
-    action sfc_encapsulation(bit<24> SPI) {
+
+    action sfc_encapsulation(bit<8> op, bit<8> sc, bit<9> sf0, bit<9> sf1,bit<9> sf2, bit<9> sf3) {
         hdr.ethernet.etherType = TYPE_SFC;
         hdr.sfc.setValid();
-        hdr.sfc.SPI = SPI;
-        hdr.sfc.SI = 255;
-        hdr.sfc.cur_idx = 0; // HA
-        hdr.sfc.chain_len = 0; //  from ruleTODO
-        hdr.sfc_chain.setValid(); // HA;
+        hdr.sfc.op = op;
+        hdr.sfc.sc = sc;
         hdr.tunnel.setValid();
-        hdr.tunnel.dst_id = 0;
+        hdr.tunnel.dst_id = 255;
+        hdr.sfc_chain[0].sf = sf0; // Too ugly tough..
+        hdr.sfc_chain[0].setValid();
+        hdr.sfc_chain[1].sf = sf1;
+        hdr.sfc_chain[1].setValid();
+        hdr.sfc_chain[2].sf = sf2;
+        hdr.sfc_chain[2].setValid();
+        hdr.sfc_chain[3].sf = sf3;
+        hdr.sfc_chain[3].setValid();
     }
     table sfc_classifier {
         key = {
@@ -249,16 +251,18 @@ control MyIngress(inout headers hdr,
         if (hdr.ipv4.isValid() && hdr.ipv4.dscp == 0) {   // Process only non-SFC packets
             ipv4_lpm.apply();
         }
-        else{ // SFC packets
+        else{ // SFC packets (dscp > 0)
             if (!hdr.sfc.isValid()){ /// intial stage?
                 sfc_classifier.apply(); // Encaps the packet
             }
-            if (hdr.sfc.SI == 0){
-                drop();
+            if (hdr.sfc.sc == 0){ // end of the chain
+                sfc_decapsulation();
+                ipv4_lpm.apply();
             }
-            sfc_next_ha(); //HA; obtain next SF from  sfc chain header
-            sfc_egress.apply();
-            sfc_termination.apply();
+            else{
+                sfc_pop_chain(); // Get next node ID
+                sfc_egress.apply(); // determine output port
+            }
         }
     }
 }
