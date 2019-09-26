@@ -23,13 +23,12 @@ header ethernet_t {
     bit<16>   etherType;
 }
 
-header tunnel_t { // why still use this..?
+header tunnel_t { // We need this to satisfy RFC7665
     tunnelAddr_t dst_id; // Next SF
 }
 
 header sfc_t {
-    bit<8> op;
-    bit<8> sc; // tracker
+    bit<8> sc; // tracker, length of chain
 }
 
 header sfc_chain_t {
@@ -80,8 +79,8 @@ struct metadata {
 struct headers {
     ethernet_t ethernet;
     tunnel_t tunnel;
-    sfc_chain_t[MAX_HOPS] sfc_chain;
     sfc_t sfc;
+    sfc_chain_t[MAX_HOPS] sfc_chain;
     ipv4_t ipv4;
     tcp_t tcp;
     udp_t udp;
@@ -115,9 +114,15 @@ parser MyParser(packet_in packet,
     }
     state parse_sfc {
         packet.extract(hdr.sfc);
-        transition parse_ipv4;
+        transition parse_sfc_chain;
     }
-
+    state parse_sfc_chain {
+        packet.extract(hdr.sfc_chain.next);
+        transition select(hdr.sfc.sc) {
+            1: parse_ipv4;
+            default: parse_sfc_chain;
+        }
+    }
     state parse_ipv4 {
         packet.extract(hdr.ipv4);
         transition select(hdr.ipv4.protocol) {
@@ -156,10 +161,10 @@ control MyIngress(inout headers hdr,
 
 
 
-    action sfc_pop_chain() {
-        hdr.tunnel.dst_id = hdr.sfc_chain[0].sf; // Update next SF.
+    action sfc_sff() {
+
+        hdr.tunnel.dst_id = (bit<9>)hdr.sfc_chain[0].sf; // Update next SF.
         hdr.sfc_chain.pop_front(1); // Remove used SF
-        hdr.sfc.sc = hdr.sfc.sc - 1; // decrease chain tracker..
     }
 
     action drop() {
@@ -185,8 +190,21 @@ control MyIngress(inout headers hdr,
         default_action = drop();
     }
 
+    action sf_action() { // Firewall, NAT, etc...
+        hdr.sfc.sc = hdr.sfc.sc - 1; // decrease chain tracker/length
+        sfc_sff();
+    }
+    table sf_processing {
+        key = {
 
-
+        }
+        actions = {
+            sf_action;
+            NoAction;
+        }
+        size = 1024;
+        default_action = NoAction();
+    }
 
     action sfc_decapsulation() {
            hdr.ethernet.etherType = TYPE_IPV4;
@@ -199,21 +217,21 @@ control MyIngress(inout headers hdr,
            hdr.sfc_chain[3].setInvalid();
     }
 
-    action sfc_encapsulation(bit<8> op, bit<8> sc, bit<9> sf0, bit<9> sf1,bit<9> sf2, bit<9> sf3) {
+    action sfc_encapsulation(bit<8> sc, bit<9> sf1, bit<9> sf2,bit<9> sf3, bit<9> sf4) {
         hdr.ethernet.etherType = TYPE_SFC;
         hdr.sfc.setValid();
-        hdr.sfc.op = op;
         hdr.sfc.sc = sc;
         hdr.tunnel.setValid();
         hdr.tunnel.dst_id = 255;
-        hdr.sfc_chain[0].sf = sf0; // Too ugly tough..
+
         hdr.sfc_chain[0].setValid();
-        hdr.sfc_chain[1].sf = sf1;
         hdr.sfc_chain[1].setValid();
-        hdr.sfc_chain[2].sf = sf2;
         hdr.sfc_chain[2].setValid();
-        hdr.sfc_chain[3].sf = sf3;
         hdr.sfc_chain[3].setValid();
+        hdr.sfc_chain[0].sf = sf1; // Too ugly tough..
+        hdr.sfc_chain[1].sf = sf2;
+        hdr.sfc_chain[2].sf = sf3;
+        hdr.sfc_chain[3].sf = sf4;
     }
     table sfc_classifier {
         key = {
@@ -245,24 +263,18 @@ control MyIngress(inout headers hdr,
         default_action = drop();
     }
 
-
     apply {
-
-        if (hdr.ipv4.isValid() && hdr.ipv4.dscp == 0) {   // Process only non-SFC packets
+        if (hdr.ipv4.isValid() && hdr.ipv4.dscp == 0) { // Process only non-SFC packets
             ipv4_lpm.apply();
         }
         else{ // SFC packets (dscp > 0)
             if (!hdr.sfc.isValid()){ /// intial stage?
                 sfc_classifier.apply(); // Encaps the packet
             }
-            if (hdr.sfc.sc == 0){ // end of the chain
+            sf_processing.apply();
+            sfc_egress.apply(); // underlay forwarding
+            if (hdr.sfc.sc == 0) // end of the chain
                 sfc_decapsulation();
-                ipv4_lpm.apply();
-            }
-            else{
-                sfc_pop_chain(); // Get next node ID
-                sfc_egress.apply(); // determine output port
-            }
         }
     }
 }
@@ -310,7 +322,7 @@ control MyDeparser(packet_out packet, in headers hdr) {
         packet.emit(hdr.ethernet);
         packet.emit(hdr.tunnel);
         packet.emit(hdr.sfc);
-        packet.emit(hdr.sfc_chain); // HA
+        packet.emit(hdr.sfc_chain);
         packet.emit(hdr.ipv4);
         packet.emit(hdr.tcp);
         packet.emit(hdr.udp);
