@@ -10,7 +10,7 @@
       },
       "action_name": "MyIngress.ipv4_forward",
       "action_params": {
-        "dstAddr": "00:00:00:00:01:01",
+        "dstAddr": "00:00:00:00:40:01",
         "port": 2
       }
     },
@@ -28,37 +28,11 @@
     {
       "table": "MyIngress.sfc_egress",
       "match": {
-        "hdr.tunnel.dst_id": 1
+        "hdr.sfc_chain[0].sf": 0
       },
       "action_name": "MyIngress.sfc_forward",
       "action_params": {
-        "dstAddr": "00:00:00:00:01:01",
-        "port": 2
-      }
-    },
-    {
-      "table": "MyIngress.sfc_egress",
-      "match": {
-        "hdr.tunnel.dst_id": 2
-      },
-      "action_name": "MyIngress.sfc_forward",
-      "action_params": {
-        "dstAddr": "00:00:00:00:02:02",
         "port": 1
-      }
-    },
-    {
-      "table": "MyIngress.sfc_classifier",
-      "match": {
-        "hdr.ipv4.dscp": 2
-      },
-      "action_name": "MyIngress.sfc_encapsulation",
-      "action_params": {
-        "sc": 1,
-        "sf1": 1,
-        "sf2": 255,
-        "sf3": 255,
-        "sf4": 255
       }
     },
     {

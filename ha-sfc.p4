@@ -6,7 +6,6 @@ const bit<16> TYPE_SFC = 0x1212; // Define TYPE for SFC
 const bit<8> TYPE_TCP = 0x06;
 const bit<8> TYPE_UDP = 0x11;
 const bit<16> TYPE_IPV4 = 0x800;
-const bit<8> TYPE_TUNNEL = 0x1;
 #define MAX_HOPS 4 //  Max service chain  length
 /*************************************************************************
 *********************** H E A D E R S  ***********************************
@@ -15,16 +14,11 @@ const bit<8> TYPE_TUNNEL = 0x1;
 typedef bit<9>  egressSpec_t;
 typedef bit<48> macAddr_t;
 typedef bit<32> ip4Addr_t;
-typedef bit<9> tunnelAddr_t;
 
 header ethernet_t {
     macAddr_t dstAddr;
     macAddr_t srcAddr;
     bit<16>   etherType;
-}
-
-header tunnel_t { // We need this to satisfy RFC7665
-    tunnelAddr_t dst_id; // Next SF
 }
 
 header sfc_t {
@@ -33,6 +27,7 @@ header sfc_t {
 
 header sfc_chain_t {
     bit<9> sf; // Next SF
+    bit<8> tail; // 1: Tail
 }
 
 header ipv4_t {
@@ -78,7 +73,6 @@ struct metadata {
 
 struct headers {
     ethernet_t ethernet;
-    tunnel_t tunnel;
     sfc_t sfc;
     sfc_chain_t[MAX_HOPS] sfc_chain;
     ipv4_t ipv4;
@@ -102,15 +96,10 @@ parser MyParser(packet_in packet,
     state parse_ethernet {
         packet.extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
-            TYPE_SFC: parse_tunnel;
+            TYPE_SFC: parse_sfc;
             TYPE_IPV4: parse_ipv4;
             default: accept;
         }
-    }
-    state parse_tunnel {
-        packet.extract(hdr.tunnel);
-        transition parse_sfc;
-
     }
     state parse_sfc {
         packet.extract(hdr.sfc);
@@ -118,7 +107,7 @@ parser MyParser(packet_in packet,
     }
     state parse_sfc_chain {
         packet.extract(hdr.sfc_chain.next);
-        transition select(hdr.sfc.sc) {
+        transition select(hdr.sfc_chain.last.tail) {
             1: parse_ipv4;
             default: parse_sfc_chain;
         }
@@ -161,11 +150,7 @@ control MyIngress(inout headers hdr,
 
 
 
-    action sfc_sff() {
 
-        hdr.tunnel.dst_id = (bit<9>)hdr.sfc_chain[0].sf; // Update next SF.
-        hdr.sfc_chain.pop_front(1); // Remove used SF
-    }
 
     action drop() {
         mark_to_drop();
@@ -192,7 +177,8 @@ control MyIngress(inout headers hdr,
 
     action sf_action() { // Firewall, NAT, etc...
         hdr.sfc.sc = hdr.sfc.sc - 1; // decrease chain tracker/length
-        sfc_sff();
+        hdr.sfc_chain.pop_front(1); // Remove used SF
+
     }
     table sf_processing {
         key = {
@@ -209,7 +195,6 @@ control MyIngress(inout headers hdr,
     action sfc_decapsulation() {
            hdr.ethernet.etherType = TYPE_IPV4;
            hdr.ipv4.dscp = 0;
-           hdr.tunnel.setInvalid();
            hdr.sfc.setInvalid();
            hdr.sfc_chain[0].setInvalid();
            hdr.sfc_chain[1].setInvalid();
@@ -221,9 +206,6 @@ control MyIngress(inout headers hdr,
         hdr.ethernet.etherType = TYPE_SFC;
         hdr.sfc.setValid();
         hdr.sfc.sc = sc;
-        hdr.tunnel.setValid();
-        hdr.tunnel.dst_id = 255;
-
         hdr.sfc_chain[0].setValid();
         hdr.sfc_chain[1].setValid();
         hdr.sfc_chain[2].setValid();
@@ -232,6 +214,10 @@ control MyIngress(inout headers hdr,
         hdr.sfc_chain[1].sf = sf2;
         hdr.sfc_chain[2].sf = sf3;
         hdr.sfc_chain[3].sf = sf4;
+        hdr.sfc_chain[0].tail = 0; // Too ugly tough..
+        hdr.sfc_chain[1].tail = 0;
+        hdr.sfc_chain[2].tail = 0;
+        hdr.sfc_chain[3].tail = 1;
     }
     table sfc_classifier {
         key = {
@@ -245,15 +231,13 @@ control MyIngress(inout headers hdr,
         default_action = NoAction();
     }
 
-    action sfc_forward(macAddr_t dstAddr, egressSpec_t port) {
+    action sfc_forward(egressSpec_t port) {
         standard_metadata.egress_spec = port;
-        hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
-        hdr.ethernet.dstAddr = dstAddr;
         hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
     }
     table sfc_egress { // calculate (physical) output port from sfc tunneling header
         key = {
-            hdr.tunnel.dst_id: exact;
+            hdr.sfc_chain[0].sf: exact;
         }
         actions = {
             sfc_forward;
@@ -268,13 +252,15 @@ control MyIngress(inout headers hdr,
             ipv4_lpm.apply();
         }
         else{ // SFC packets (dscp > 0)
-            if (!hdr.sfc.isValid()){ /// intial stage?
+            if (!hdr.sfc.isValid())/// intial stage?
                 sfc_classifier.apply(); // Encaps the packet
-            }
             sf_processing.apply();
-            sfc_egress.apply(); // underlay forwarding
-            if (hdr.sfc.sc == 0) // end of the chain
+            if (hdr.sfc.sc == 0){
                 sfc_decapsulation();
+                ipv4_lpm.apply();
+            }
+            else
+                sfc_egress.apply(); // underlay forwarding
         }
     }
 }
@@ -320,7 +306,6 @@ control MyComputeChecksum(inout headers  hdr, inout metadata meta) {
 control MyDeparser(packet_out packet, in headers hdr) {
     apply {
         packet.emit(hdr.ethernet);
-        packet.emit(hdr.tunnel);
         packet.emit(hdr.sfc);
         packet.emit(hdr.sfc_chain);
         packet.emit(hdr.ipv4);
