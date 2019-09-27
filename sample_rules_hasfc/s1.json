@@ -53,7 +53,7 @@
       "action_name": "MyIngress.sfc_encapsulation",
       "action_params": {
         "sc": 2,
-        "sf1": 1,
+        "sf1": 2,
         "sf2": 3,
         "sf3": 0,
         "sf4": 0

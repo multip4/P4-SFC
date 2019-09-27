@@ -6,7 +6,7 @@ const bit<16> TYPE_SFC = 0x1212; // Define TYPE for SFC
 const bit<8> TYPE_TCP = 0x06;
 const bit<8> TYPE_UDP = 0x11;
 const bit<16> TYPE_IPV4 = 0x800;
-#define MAX_HOPS 4 //  Max service chain  length
+#define MAX_HOPS 4 //  Max chain length
 /*************************************************************************
 *********************** H E A D E R S  ***********************************
 *************************************************************************/
@@ -22,7 +22,7 @@ header ethernet_t {
 }
 
 header sfc_t {
-    bit<8> sc; // tracker, length of chain
+    bit<8> sc; // Chaint racker
 }
 
 header sfc_chain_t {
@@ -33,7 +33,7 @@ header sfc_chain_t {
 header ipv4_t {
     bit<4>    version;
     bit<4>    ihl;
-    bit<8>    dscp; // We use DSCP field to assign SFP
+    bit<8>    dscp; // 0: Normal, 1~ : SFC
     bit<16>   totalLen;
     bit<16>   identification;
     bit<3>    flags;
@@ -147,11 +147,6 @@ control MyVerifyChecksum(inout headers hdr, inout metadata meta) {
 control MyIngress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
-
-
-
-
-
     action drop() {
         mark_to_drop();
     }
@@ -161,7 +156,6 @@ control MyIngress(inout headers hdr,
         hdr.ethernet.dstAddr = dstAddr;
         hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
     }
-
     table ipv4_lpm {
         key = {
             hdr.ipv4.dstAddr: lpm;
@@ -174,8 +168,7 @@ control MyIngress(inout headers hdr,
         size = 1024;
         default_action = drop();
     }
-
-    action sf_action() { // Firewall, NAT, etc...
+    action sf_action() { // Firewall, NAT, etc... SW can be SF
         hdr.sfc.sc = hdr.sfc.sc - 1; // decrease chain tracker/length
         hdr.sfc_chain.pop_front(1); // Remove used SF
 
@@ -210,7 +203,7 @@ control MyIngress(inout headers hdr,
         hdr.sfc_chain[1].setValid();
         hdr.sfc_chain[2].setValid();
         hdr.sfc_chain[3].setValid();
-        hdr.sfc_chain[0].sf = sf1; // Too ugly tough..
+        hdr.sfc_chain[0].sf = sf1; // Too ugly tough.. ASIC does not allow loops
         hdr.sfc_chain[1].sf = sf2;
         hdr.sfc_chain[2].sf = sf3;
         hdr.sfc_chain[3].sf = sf4;
@@ -235,7 +228,7 @@ control MyIngress(inout headers hdr,
         standard_metadata.egress_spec = port;
         hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
     }
-    table sfc_egress { // calculate (physical) output port from sfc tunneling header
+    table sfc_egress { // overlay forwarding
         key = {
             hdr.sfc_chain[0].sf: exact;
         }
@@ -248,19 +241,18 @@ control MyIngress(inout headers hdr,
     }
 
     apply {
-        if (hdr.ipv4.isValid() && hdr.ipv4.dscp == 0) { // Process only non-SFC packets
+        if (hdr.ipv4.isValid() && hdr.ipv4.dscp == 0)
             ipv4_lpm.apply();
-        }
         else{ // SFC packets (dscp > 0)
             if (!hdr.sfc.isValid())/// intial stage?
                 sfc_classifier.apply(); // Encaps the packet
-            sf_processing.apply();
-            if (hdr.sfc.sc == 0){
-                sfc_decapsulation();
-                ipv4_lpm.apply();
+            sf_processing.apply(); // If this Sw includes SF, just do it.
+            if (hdr.sfc.sc == 0){ // SFC ends
+                sfc_decapsulation(); //Decaps the packet
+                ipv4_lpm.apply(); // Underlay forwarding
             }
             else
-                sfc_egress.apply(); // underlay forwarding
+                sfc_egress.apply(); // Overlay forwarding
         }
     }
 }
