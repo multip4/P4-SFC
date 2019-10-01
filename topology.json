@@ -1,0 +1,15 @@
+{
+    "hosts": {
+        "h1": {"ip": "10.0.1.1", "mac": "00:00:00:00:01:01"},
+        "h2": {"ip": "10.0.2.2", "mac": "00:00:00:00:02:02"}
+    },
+    "switches": {
+        "s1": { "runtime_json" : "./switch_rules/s1.json", "mac": "00:00:00:00:10:01"},
+        "s2": { "runtime_json" : "./switch_rules/s2.json", "mac": "00:00:00:00:20:01" },
+        "s3": { "runtime_json" : "./switch_rules/s3.json", "mac": "00:00:00:00:30:01" },
+        "s4": { "runtime_json" : "./switch_rules/s4.json", "mac": "00:00:00:00:40:01" }
+    },
+    "links": [
+        ["h1", "s1"], ["s1", "s2"], ["s1", "s3"], ["s2", "s4"], ["s3", "s4"], ["h2","s4"]
+    ]
+}

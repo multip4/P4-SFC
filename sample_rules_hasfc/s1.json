@@ -48,12 +48,12 @@
     {
       "table": "MyIngress.sfc_classifier",
       "match": {
-        "hdr.ipv4.dscp": 1
+        "hdr.ipv4.tos": 1
       },
       "action_name": "MyIngress.sfc_encapsulation",
       "action_params": {
         "sc": 2,
-        "sf1": 2,
+        "sf1": 1,
         "sf2": 3,
         "sf3": 0,
         "sf4": 0

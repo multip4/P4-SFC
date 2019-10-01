@@ -6,6 +6,7 @@ const bit<16> TYPE_SFC = 0x1212; // Define TYPE for SFC
 const bit<8> TYPE_TCP = 0x06;
 const bit<8> TYPE_UDP = 0x11;
 const bit<16> TYPE_IPV4 = 0x800;
+const bit<32> MAX_SFC_ID = 1 << 16;
 #define MAX_HOPS 4 //  Max chain length
 /*************************************************************************
 *********************** H E A D E R S  ***********************************
@@ -33,7 +34,8 @@ header sfc_chain_t {
 header ipv4_t {
     bit<4>    version;
     bit<4>    ihl;
-    bit<8>    dscp; // 0: Normal, 1~ : SFC
+    bit<6>    tos; // 0: Normal, 1~ : SFC
+    bit<2>    ecn;
     bit<16>   totalLen;
     bit<16>   identification;
     bit<3>    flags;
@@ -147,6 +149,10 @@ control MyVerifyChecksum(inout headers hdr, inout metadata meta) {
 control MyIngress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
+
+
+    counter(MAX_SFC_ID, CounterType.packets_and_bytes) ingressSFCCounter;
+    counter(MAX_SFC_ID, CounterType.packets_and_bytes) egressSFCCounter;
     action drop() {
         mark_to_drop();
     }
@@ -187,12 +193,13 @@ control MyIngress(inout headers hdr,
 
     action sfc_decapsulation() {
            hdr.ethernet.etherType = TYPE_IPV4;
-           hdr.ipv4.dscp = 0;
+           hdr.ipv4.tos = 0;
            hdr.sfc.setInvalid();
            hdr.sfc_chain[0].setInvalid();
            hdr.sfc_chain[1].setInvalid();
            hdr.sfc_chain[2].setInvalid();
            hdr.sfc_chain[3].setInvalid();
+           egressSFCCounter.count((bit<32>) hdr.ipv4.tos);
     }
 
     action sfc_encapsulation(bit<8> sc, bit<9> sf1, bit<9> sf2,bit<9> sf3, bit<9> sf4) {
@@ -211,10 +218,11 @@ control MyIngress(inout headers hdr,
         hdr.sfc_chain[1].tail = 0;
         hdr.sfc_chain[2].tail = 0;
         hdr.sfc_chain[3].tail = 1;
+        ingressSFCCounter.count((bit<32>) hdr.ipv4.tos);
     }
     table sfc_classifier {
         key = {
-            hdr.ipv4.dscp: exact;
+            hdr.ipv4.tos: exact;
         }
         actions = {
             sfc_encapsulation;
@@ -241,9 +249,9 @@ control MyIngress(inout headers hdr,
     }
 
     apply {
-        if (hdr.ipv4.isValid() && hdr.ipv4.dscp == 0)
+        if (hdr.ipv4.isValid() && hdr.ipv4.tos == 0)
             ipv4_lpm.apply();
-        else{ // SFC packets (dscp > 0)
+        else{ // SFC packets (tos > 0)
             if (!hdr.sfc.isValid())/// intial stage?
                 sfc_classifier.apply(); // Encaps the packet
             sf_processing.apply(); // If this Sw includes SF, just do it.
@@ -277,7 +285,8 @@ control MyComputeChecksum(inout headers  hdr, inout metadata meta) {
 	    hdr.ipv4.isValid(),
             { hdr.ipv4.version,
 	      hdr.ipv4.ihl,
-              hdr.ipv4.dscp,
+              hdr.ipv4.tos,
+              hdr.ipv4.ecn,
               hdr.ipv4.totalLen,
               hdr.ipv4.identification,
               hdr.ipv4.flags,
