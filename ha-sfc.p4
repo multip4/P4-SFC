@@ -154,7 +154,7 @@ control MyIngress(inout headers hdr,
     counter(MAX_SFC_ID, CounterType.packets_and_bytes) ingressSFCCounter;
     counter(MAX_SFC_ID, CounterType.packets_and_bytes) egressSFCCounter;
     action drop() {
-        mark_to_drop();
+        mark_to_drop(standard_metadata);
     }
     action ipv4_forward(macAddr_t dstAddr, egressSpec_t port) {
         standard_metadata.egress_spec = port;
