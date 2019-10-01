@@ -23,12 +23,13 @@ header ethernet_t {
 }
 
 header sfc_t {
+    bit<8> id;
     bit<8> sc; // Chaint racker
 }
 
 header sfc_chain_t {
     bit<9> sf; // Next SF
-    bit<8> tail; // 1: Tail
+    bit<7> tail; // 1: Tail
 }
 
 header ipv4_t {
@@ -199,12 +200,13 @@ control MyIngress(inout headers hdr,
            hdr.sfc_chain[1].setInvalid();
            hdr.sfc_chain[2].setInvalid();
            hdr.sfc_chain[3].setInvalid();
-           egressSFCCounter.count((bit<32>) hdr.ipv4.tos);
+           egressSFCCounter.count((bit<32>) hdr.sfc.id);
     }
 
-    action sfc_encapsulation(bit<8> sc, bit<9> sf1, bit<9> sf2,bit<9> sf3, bit<9> sf4) {
+    action sfc_encapsulation(bit<8> id, bit<8> sc, bit<9> sf1, bit<9> sf2,bit<9> sf3, bit<9> sf4) {
         hdr.ethernet.etherType = TYPE_SFC;
         hdr.sfc.setValid();
+        hdr.sfc.id= id;
         hdr.sfc.sc = sc;
         hdr.sfc_chain[0].setValid();
         hdr.sfc_chain[1].setValid();
@@ -218,7 +220,7 @@ control MyIngress(inout headers hdr,
         hdr.sfc_chain[1].tail = 0;
         hdr.sfc_chain[2].tail = 0;
         hdr.sfc_chain[3].tail = 1;
-        ingressSFCCounter.count((bit<32>) hdr.ipv4.tos);
+        ingressSFCCounter.count((bit<32>) hdr.sfc.id);
     }
     table sfc_classifier {
         key = {
@@ -251,7 +253,7 @@ control MyIngress(inout headers hdr,
     apply {
         if (hdr.ipv4.isValid() && hdr.ipv4.tos == 0)
             ipv4_lpm.apply();
-        else{ // SFC packets (tos > 0)
+        else if (hdr.ipv4.tos > 0){ // SFC packets (tos > 0)
             if (!hdr.sfc.isValid())/// intial stage?
                 sfc_classifier.apply(); // Encaps the packet
             sf_processing.apply(); // If this Sw includes SF, just do it.

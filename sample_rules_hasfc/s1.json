@@ -1,6 +1,6 @@
 {
   "target": "bmv2",
-  "p4info": "build/ha-sfc.p4info",
+  "p4info": "build/ha-sfc.p4.p4info.txt",
   "bmv2_json": "build/ha-sfc.json",
   "table_entries": [
     {
@@ -52,6 +52,7 @@
       },
       "action_name": "MyIngress.sfc_encapsulation",
       "action_params": {
+        "id": 100,
         "sc": 2,
         "sf1": 1,
         "sf2": 3,

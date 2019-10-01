@@ -9,7 +9,6 @@ from scapy.all import PacketListField, ShortField, IntField, LongField, BitField
 from scapy.all import IP, UDP, TCP, Ether
 from scapy.layers.inet import _IPOption_HDR
 from scapy.fields import *
-from sfc_header import sfc
 
 def get_if():
     ifs=get_if_list()
