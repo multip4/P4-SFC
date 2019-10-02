@@ -9,7 +9,6 @@ import argparse
 from scapy.all import sendp, send, get_if_list, get_if_hwaddr, hexdump
 from scapy.all import Packet
 from scapy.all import Ether, IP, UDP, TCP
-from sfc_header import sfc
 
 def get_if():
     ifs=get_if_list()

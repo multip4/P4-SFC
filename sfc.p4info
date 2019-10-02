@@ -1,0 +1,198 @@
+pkg_info {
+  arch: "v1model"
+}
+tables {
+  preamble {
+    id: 33574068
+    name: "MyIngress.ipv4_lpm"
+    alias: "ipv4_lpm"
+  }
+  match_fields {
+    id: 1
+    name: "hdr.ipv4.dstAddr"
+    bitwidth: 32
+    match_type: LPM
+  }
+  action_refs {
+    id: 16799317
+  }
+  action_refs {
+    id: 16805608
+  }
+  action_refs {
+    id: 16800567
+  }
+  size: 1024
+}
+tables {
+  preamble {
+    id: 33594719
+    name: "MyIngress.sfc_termination"
+    alias: "sfc_termination"
+  }
+  match_fields {
+    id: 1
+    name: "hdr.ethernet.dstAddr"
+    bitwidth: 48
+    match_type: EXACT
+  }
+  action_refs {
+    id: 16830179
+  }
+  action_refs {
+    id: 16800567
+  }
+  size: 1024
+}
+tables {
+  preamble {
+    id: 33568033
+    name: "MyIngress.sfc_classifier"
+    alias: "sfc_classifier"
+  }
+  match_fields {
+    id: 1
+    name: "hdr.ipv4.dscp"
+    bitwidth: 8
+    match_type: EXACT
+  }
+  action_refs {
+    id: 16786745
+  }
+  action_refs {
+    id: 16800567
+  }
+  size: 1024
+}
+tables {
+  preamble {
+    id: 33565793
+    name: "MyIngress.sfc_next"
+    alias: "sfc_next"
+  }
+  match_fields {
+    id: 1
+    name: "hdr.sfc.SPI"
+    bitwidth: 24
+    match_type: EXACT
+  }
+  match_fields {
+    id: 2
+    name: "hdr.sfc.SI"
+    bitwidth: 8
+    match_type: EXACT
+  }
+  action_refs {
+    id: 16799312
+  }
+  action_refs {
+    id: 16805608
+  }
+  size: 1024
+}
+tables {
+  preamble {
+    id: 33570146
+    name: "MyIngress.sfc_egress"
+    alias: "sfc_egress"
+  }
+  match_fields {
+    id: 1
+    name: "hdr.tunnel.dst_id"
+    bitwidth: 16
+    match_type: EXACT
+  }
+  action_refs {
+    id: 16819366
+  }
+  action_refs {
+    id: 16805608
+  }
+  size: 1024
+}
+actions {
+  preamble {
+    id: 16800567
+    name: "NoAction"
+    alias: "NoAction"
+  }
+}
+actions {
+  preamble {
+    id: 16805608
+    name: "MyIngress.drop"
+    alias: "drop"
+  }
+}
+actions {
+  preamble {
+    id: 16799317
+    name: "MyIngress.ipv4_forward"
+    alias: "ipv4_forward"
+  }
+  params {
+    id: 1
+    name: "dstAddr"
+    bitwidth: 48
+  }
+  params {
+    id: 2
+    name: "port"
+    bitwidth: 9
+  }
+}
+actions {
+  preamble {
+    id: 16830179
+    name: "MyIngress.sfc_decapsulation"
+    alias: "sfc_decapsulation"
+  }
+}
+actions {
+  preamble {
+    id: 16786745
+    name: "MyIngress.sfc_encapsulation"
+    alias: "sfc_encapsulation"
+  }
+  params {
+    id: 1
+    name: "SPI"
+    bitwidth: 24
+  }
+}
+actions {
+  preamble {
+    id: 16799312
+    name: "MyIngress.sfc_set_dst_id"
+    alias: "sfc_set_dst_id"
+  }
+  params {
+    id: 1
+    name: "dst_id"
+    bitwidth: 16
+  }
+  params {
+    id: 2
+    name: "NxpHp_id"
+    bitwidth: 16
+  }
+}
+actions {
+  preamble {
+    id: 16819366
+    name: "MyIngress.sfc_forward"
+    alias: "sfc_forward"
+  }
+  params {
+    id: 1
+    name: "dstAddr"
+    bitwidth: 48
+  }
+  params {
+    id: 2
+    name: "port"
+    bitwidth: 9
+  }
+}
+type_info {
+}
