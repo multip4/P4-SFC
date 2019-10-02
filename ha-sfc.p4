@@ -153,7 +153,6 @@ control MyIngress(inout headers hdr,
 
 
     counter(MAX_SFC_ID, CounterType.packets_and_bytes) ingressSFCCounter;
-    counter(MAX_SFC_ID, CounterType.packets_and_bytes) egressSFCCounter;
     action drop() {
         mark_to_drop(standard_metadata);
     }
@@ -200,7 +199,6 @@ control MyIngress(inout headers hdr,
            hdr.sfc_chain[1].setInvalid();
            hdr.sfc_chain[2].setInvalid();
            hdr.sfc_chain[3].setInvalid();
-           egressSFCCounter.count((bit<32>) hdr.sfc.id);
     }
 
     action sfc_encapsulation(bit<8> id, bit<8> sc, bit<9> sf1, bit<9> sf2,bit<9> sf3, bit<9> sf4) {
@@ -220,7 +218,6 @@ control MyIngress(inout headers hdr,
         hdr.sfc_chain[1].tail = 0;
         hdr.sfc_chain[2].tail = 0;
         hdr.sfc_chain[3].tail = 1;
-        ingressSFCCounter.count((bit<32>) hdr.sfc.id);
     }
     table sfc_classifier {
         key = {
@@ -257,6 +254,7 @@ control MyIngress(inout headers hdr,
             if (!hdr.sfc.isValid())/// intial stage?
                 sfc_classifier.apply(); // Encaps the packet
             sf_processing.apply(); // If this Sw includes SF, just do it.
+            ingressSFCCounter.count((bit<32>) hdr.sfc.id);
             if (hdr.sfc.sc == 0){ // SFC ends
                 sfc_decapsulation(); //Decaps the packet
                 ipv4_lpm.apply(); // Underlay forwarding

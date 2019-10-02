@@ -28,7 +28,7 @@
     {
       "table": "MyIngress.sfc_egress",
       "match": {
-        "hdr.sfc_chain[0].sf": 3
+        "hdr.sfc_chain[0].sf": 4
       },
       "action_name": "MyIngress.sfc_forward",
       "action_params": {

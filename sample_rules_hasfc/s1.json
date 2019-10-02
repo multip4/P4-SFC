@@ -28,7 +28,7 @@
     {
       "table": "MyIngress.sfc_egress",
       "match": {
-        "hdr.sfc_chain[0].sf": 1
+        "hdr.sfc_chain[0].sf": 2
       },
       "action_name": "MyIngress.sfc_forward",
       "action_params": {
@@ -38,7 +38,7 @@
     {
       "table": "MyIngress.sfc_egress",
       "match": {
-        "hdr.sfc_chain[0].sf": 2
+        "hdr.sfc_chain[0].sf": 3
       },
       "action_name": "MyIngress.sfc_forward",
       "action_params": {
@@ -52,10 +52,10 @@
       },
       "action_name": "MyIngress.sfc_encapsulation",
       "action_params": {
-        "id": 100,
+        "id": 1,
         "sc": 2,
-        "sf1": 1,
-        "sf2": 3,
+        "sf1": 2,
+        "sf2": 4,
         "sf3": 0,
         "sf4": 0
       }
