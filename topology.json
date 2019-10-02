@@ -1,15 +1,15 @@
 {
     "hosts": {
-        "h1": {"ip": "10.0.1.1", "mac": "00:00:00:00:01:01"},
-        "h2": {"ip": "10.0.2.2", "mac": "00:00:00:00:02:02"}
+        "h1": {"ip": "10.0.1.1/24", "mac": "00:00:00:00:01:01", "commands":["route add default gw 10.0.1.10 dev eth0", "arp -i eth0 -s 10.0.1.10 00:00:00:00:01:00"]},
+        "h2": {"ip": "10.0.2.2/24", "mac": "00:00:00:00:02:02", "commands":["route add default gw 10.0.2.20 dev eth0", "arp -i eth0 -s 10.0.2.20 00:00:00:00:02:00"]}
     },
     "switches": {
-        "s1": { "runtime_json" : "./switch_rules/s1.json", "mac": "00:00:00:00:10:01"},
-        "s2": { "runtime_json" : "./switch_rules/s2.json", "mac": "00:00:00:00:20:01" },
-        "s3": { "runtime_json" : "./switch_rules/s3.json", "mac": "00:00:00:00:30:01" },
-        "s4": { "runtime_json" : "./switch_rules/s4.json", "mac": "00:00:00:00:40:01" }
+        "s1": { "runtime_json" : "./sample_rules_hasfc/s1.json", "mac": "00:00:00:00:10:01"},
+        "s2": { "runtime_json" : "./sample_rules_hasfc/s2.json", "mac": "00:00:00:00:20:01" },
+        "s3": { "runtime_json" : "./sample_rules_hasfc/s3.json", "mac": "00:00:00:00:30:01" },
+        "s4": { "runtime_json" : "./sample_rules_hasfc/s4.json", "mac": "00:00:00:00:40:01" }
     },
     "links": [
-        ["h1", "s1"], ["s1", "s2"], ["s1", "s3"], ["s2", "s4"], ["s3", "s4"], ["h2","s4"]
+        ["h1", "s1-p1" ], ["s1-p2", "s2-p1"], ["s1-p3", "s3-p1"], ["s2-p2", "s4-p2"], ["s3-p2", "s4-p3"], ["h2","s4-p1"]
     ]
 }

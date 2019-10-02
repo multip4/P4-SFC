@@ -1,6 +1,6 @@
 {
   "target": "bmv2",
-  "p4info": "build/ha-sfc.p4info",
+  "p4info": "build/ha-sfc.p4.p4info.txt",
   "bmv2_json": "build/ha-sfc.json",
   "table_entries": [
     {
