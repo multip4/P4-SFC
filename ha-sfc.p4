@@ -181,7 +181,7 @@ control MyIngress(inout headers hdr,
     }
     table sf_processing {
         key = {
-
+            hdr.sfc_chain[0].sf: exact;
         }
         actions = {
             sf_action;

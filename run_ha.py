@@ -13,12 +13,20 @@ import p4runtime_lib.bmv2
 from p4runtime_lib.switch import ShutdownAllSwitchConnections
 import p4runtime_lib.helper
 
+detection_counter=3
 cnt = [0,0,0,0]
 before = [-1,-1,-1,-1]
 chain1 = [2,4,0,0]
 chain1_len = len(list(filter(lambda x: (x > 0), chain1)))
 chain2 = [3,4,0,0]
 chain2_len = len(list(filter(lambda x: (x > 0), chain2)))
+
+def reset_before():
+    before[0]-1
+    before[1]-1
+    before[2]-1
+    before[3]-1
+
 def writeIPv4Rules(p4info_helper, sw, dst_eth_addr, dst_ip_addr,port,update):
     table_entry = p4info_helper.buildTableEntry(
         table_name="MyIngress.ipv4_lpm",
@@ -71,10 +79,11 @@ def writeEgressRules(p4info_helper, sw, sf, port):
     sw.WriteTableEntry(table_entry)
 
 
-def writeProcessingRules(p4info_helper, sw):
+def writeProcessingRules(p4info_helper, sw,sf):
     table_entry = p4info_helper.buildTableEntry(
         table_name="MyIngress.sf_processing",
         match_fields={
+            "hdr.sfc_chain[0].sf": sf
         },
         action_name="MyIngress.sf_action",
         action_params={
@@ -106,9 +115,6 @@ def printAlive(p4info_helper, sw, counter_name, index):
                 sw.name, index, counter.data.packet_count, counter.data.byte_count
             )
             before[sw.device_id] = counter.data.packet_count
-
-
-
 
 def printGrpcError(e):
     print "gRPC Error:", e.details(),
@@ -152,55 +158,54 @@ def main(p4info_file_path, bmv2_file_path):
         s2.MasterArbitrationUpdate()
         s3.MasterArbitrationUpdate()
         s4.MasterArbitrationUpdate()
-
         # Install the P4 program on the switches
         s1.SetForwardingPipelineConfig(p4info=p4info_helper.p4info, bmv2_json_file_path=bmv2_file_path)
         s2.SetForwardingPipelineConfig(p4info=p4info_helper.p4info, bmv2_json_file_path=bmv2_file_path)
         s3.SetForwardingPipelineConfig(p4info=p4info_helper.p4info, bmv2_json_file_path=bmv2_file_path)
         s4.SetForwardingPipelineConfig(p4info=p4info_helper.p4info, bmv2_json_file_path=bmv2_file_path)
-
+        # Install the forwarindg rules on the switches
         writeIPv4Rules(p4info_helper, sw=s1, dst_eth_addr="00:00:00:00:01:01", dst_ip_addr="10.0.1.1",port=1,update=0)
-        writeIPv4Rules(p4info_helper, sw=s1, dst_eth_addr="00:00:00:00:20:01", dst_ip_addr="10.0.2.2",port=2,update=0)
+        writeIPv4Rules(p4info_helper, sw=s1, dst_eth_addr="00:00:00:00:20:01", dst_ip_addr="10.0.2.2",port=3,update=0)
         writeIPv4Rules(p4info_helper, sw=s2, dst_eth_addr="00:00:00:00:10:01", dst_ip_addr="10.0.1.1",port=1,update=0)
         writeIPv4Rules(p4info_helper, sw=s2, dst_eth_addr="00:00:00:00:40:01", dst_ip_addr="10.0.2.2",port=2,update=0)
         writeIPv4Rules(p4info_helper, sw=s3, dst_eth_addr="00:00:00:00:10:01", dst_ip_addr="10.0.1.1",port=1,update=0)
         writeIPv4Rules(p4info_helper, sw=s3, dst_eth_addr="00:00:00:00:40:01", dst_ip_addr="10.0.2.2",port=2,update=0)
-        writeIPv4Rules(p4info_helper, sw=s4, dst_eth_addr="00:00:00:00:40:01", dst_ip_addr="10.0.1.1",port=2,update=0)
+        writeIPv4Rules(p4info_helper, sw=s4, dst_eth_addr="00:00:00:00:40:01", dst_ip_addr="10.0.1.1",port=3,update=0)
         writeIPv4Rules(p4info_helper, sw=s4, dst_eth_addr="00:00:00:00:02:02", dst_ip_addr="10.0.2.2",port=1,update=0)
         writeEgressRules(p4info_helper, sw=s1, sf=2,port=2)
         writeEgressRules(p4info_helper, sw=s1, sf=3,port=3)
         writeEgressRules(p4info_helper, sw=s2, sf=4,port=2)
+        writeEgressRules(p4info_helper, sw=s2, sf=1,port=1)
         writeEgressRules(p4info_helper, sw=s3, sf=4,port=2)
+        writeEgressRules(p4info_helper, sw=s3, sf=1,port=1)
+        writeEgressRules(p4info_helper, sw=s4, sf=1,port=3)
+        writeEgressRules(p4info_helper, sw=s4, sf=2,port=2)
+        writeEgressRules(p4info_helper, sw=s4, sf=3,port=3)
         writeClassifierRules(p4info_helper,sw=s1,tos=1,id=1,sc=chain1_len,sf1=chain1[0],sf2=chain1[1],sf3=chain1[2],sf4=chain1[3],update=0)
-        writeProcessingRules(p4info_helper, sw=s2)
-        writeProcessingRules(p4info_helper, sw=s3)
-        writeProcessingRules(p4info_helper, sw=s4)
+        writeProcessingRules(p4info_helper, sw=s2,sf=1)
+        writeProcessingRules(p4info_helper, sw=s2,sf=2)
+        writeProcessingRules(p4info_helper, sw=s3,sf=3)
+        writeProcessingRules(p4info_helper, sw=s4,sf=4)
         current_id=1
         used = 0
         while True:
             sleep(1)
-            #readTableRules(p4info_helper, s1)
-            printAlive(p4info_helper, s1, "MyIngress.ingressSFCCounter", current_id)
+printAlive(p4info_helper, s1, "MyIngress.ingressSFCCounter", current_id)
             #for sw in eval("chain" + str(current_id)):
             #    if sw !=0:
             #        printAlive(p4info_helper, eval("s" + str(sw)), "MyIngress.ingressSFCCounter", current_id)
             printAlive(p4info_helper, s4, "MyIngress.ingressSFCCounter", current_id)
             bb = list(filter(lambda num: num >= 0, before))
-            if abs(bb[0] - bb[1]) < 3:
-                print abs(bb[0] - bb[1])
+            if abs(bb[0] - bb[1]) < detection_counter:
+                print "Failure Counter: %d, OK" % (abs(bb[0] - bb[1]))
             #if all(x==bb[0] for x in bb):
-                print "True"
             else:
-                print "False"
+                print "Failure Counter: %d, !!!!!Failure Detected!!!!!" % (abs(bb[0] - bb[1]))
                 if used == 0:
                     writeClassifierRules(p4info_helper,sw=s1,tos=1,id=2,sc=chain2_len,sf1=chain2[0],sf2=chain2[1],sf3=chain2[2],sf4=chain2[3],update=1)
-                    writeIPv4Rules(p4info_helper, sw=s4, dst_eth_addr="00:00:00:00:40:01", dst_ip_addr="10.0.1.1",port=3,update=1)
                     current_id=2
                     used=1
-                    before[0]=-1
-                    before[1]=-1
-                    before[2]=-1
-                    before[3]=-1
+                    reset_before()
 
     except KeyboardInterrupt:
         print " Shutting down."

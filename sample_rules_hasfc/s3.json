@@ -36,8 +36,19 @@
       }
     },
     {
+      "table": "MyIngress.sfc_egress",
+      "match": {
+        "hdr.sfc_chain[0].sf": 1
+      },
+      "action_name": "MyIngress.sfc_forward",
+      "action_params": {
+        "port": 1
+      }
+    },
+    {
       "table": "MyIngress.sf_processing",
       "match": {
+        "hdr.sfc_chain[0].sf": 3
       },
       "action_name": "MyIngress.sf_action",
       "action_params": {

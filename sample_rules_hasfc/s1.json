@@ -22,7 +22,7 @@
       "action_name": "MyIngress.ipv4_forward",
       "action_params": {
         "dstAddr": "00:00:00:00:20:01",
-        "port": 2
+        "port": 3
       }
     },
     {
@@ -58,6 +58,15 @@
         "sf2": 4,
         "sf3": 0,
         "sf4": 0
+      }
+    },
+    {
+      "table": "MyIngress.sf_processing",
+      "match": {
+        "hdr.sfc_chain[0].sf": 1
+      },
+      "action_name": "MyIngress.sf_action",
+      "action_params": {
       }
     }
   ]

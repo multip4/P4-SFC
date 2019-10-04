@@ -2,7 +2,7 @@
 import sys
 import struct
 import os
-
+import argparse
 from scapy.all import sniff, sendp, hexdump, get_if_list, get_if_hwaddr, bind_layers
 from scapy.all import Packet, IPOption
 from scapy.all import PacketListField, ShortField, IntField, LongField, BitField, FieldListField, FieldLenField
@@ -29,9 +29,14 @@ def handle_pkt(pkt):
     sys.stdout.flush()
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-k", "--if2", help="host-eth", default='h1-eth0')
+    args = parser.parse_args()
+    
     ifaces = filter(lambda i: 'eth' in i, os.listdir('/sys/class/net/'))
-    iface = ifaces[0]
+    #iface = ifaces[0]
     #iface = 's2-eth2'
+    iface=args.if2
     print "sniffing on %s" % iface
     sys.stdout.flush()
     sniff(iface = iface,
