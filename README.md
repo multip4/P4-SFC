@@ -1,15 +1,14 @@
 # High Performance and High available Service Function Chaining in Programmable Data Plane
 
-This is a P4 (P4_16) implementation of service function chaining based on [IETF RFC7665](https://tools.ietf.org/html/rfc7665) and [IETF RFC8300](https://tools.ietf.org/html/rfc8300).
+This is a P4 (P4_16) implementation of service function chaining 
 Our implementation includes the following SFC core components and functions.
 
-* Network Service Header (NSH)
 * Classifier
-  * Service Function Path (SFP) assignment
+  * Service Function Path assignment
   * SFC encapsulation
 * Service Function Forwarder (SFF)
-  * SFP forwarding
-  * SFP termination (decapsulation)
+  * SF forwarding
+  * SFC Decapsulation
 
 ## System Requirements
 * Ubuntu 14.04+
