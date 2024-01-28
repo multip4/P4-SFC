@@ -21,4 +21,3 @@ We highly recommend to use [a VM of P4 tutorials](https://github.com/p4lang/tuto
 Note that this implementation has only been tested in BMv2.
 Therefore, it may not work as is on production P4-enabled programmable switches.
 
-If you have any questions, please contact gykim08 at korea.ac.kr .
